@@ -1,0 +1,26 @@
+import setuptools
+
+requires = ["flake8 > 3.0.0", "attrs > 19.0.0"]
+
+setuptools.setup(
+    name="click_best_practices",
+    license="MIT",
+    version="0.1.0",
+    description="flake8 extension for click",
+    author="r2c",
+    author_email="flake8@r2c.dev",
+    url="https://github.com/returntocorp/click-best-practices",
+    py_modules=["click_best_practices"],
+    install_requires=requires,
+    entry_points={
+        "flake8.extension": ["CLC = click_best_practices:ClickBestPracticeChecker"]
+    },
+    classifiers=[
+        "Framework :: Flake8",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+    ],
+)
