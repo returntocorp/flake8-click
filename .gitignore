@@ -5,3 +5,6 @@ __pycache__/
 tests/__pycache__/
 # mypy
 .mypy*
+
+#venv
+.venv

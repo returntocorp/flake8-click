@@ -1,5 +1,7 @@
 import setuptools
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 requires = ["flake8 > 3.0.0", "attrs > 19.0.0"]
 
 setuptools.setup(
@@ -7,6 +9,8 @@ setuptools.setup(
     license="MIT",
     version="0.1.0",
     description="flake8 extension for click",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="r2c",
     author_email="flake8@r2c.dev",
     url="https://github.com/returntocorp/click-best-practices",
