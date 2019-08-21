@@ -9,7 +9,7 @@ Flake8 plugin for detecting click best practices
 ## Installing
 
 ```
-$ python -m pip install click_best_practices
+$ python -m pip install flake8-click
 ```
 
 _Specify `python2` or `python3` to install for a specific Python version._
@@ -22,10 +22,10 @@ Usage: flake8 [options] file file ...
 
 ...
 
-Installed plugins: click_best_practices: 0.1.0, mccabe: 0.5.3, pycodestyle: 2.2.0, pyflakes: 1.3.0
+Installed plugins: flake8-click : 0.1.0, mccabe: 0.5.3, pycodestyle: 2.2.0, pyflakes: 1.3.0
 ```
 
-Note the `click_best_practices: 0.1.0`.
+Note the `flake8-click: 0.1.0`.
 
 ## Using
 
