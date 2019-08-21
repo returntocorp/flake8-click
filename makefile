@@ -9,7 +9,7 @@ setup:
 dev: venv
 	source .venv/bin/activate && make setup
 	source .venv/bin/activate && python3 setup.py develop
-	@echo 'run `source .venv/bin/activate` to develop click_best_practices'
+	@echo 'run `source .venv/bin/activate` to develop flake8_click'
 
 release:
 	python3 setup.py bdist_wheel

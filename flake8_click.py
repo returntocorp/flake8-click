@@ -6,8 +6,8 @@ __version__ = "0.1.0"
 
 
 @attr.s
-class ClickBestPracticeChecker:
-    name = "click-best-practices"
+class ClickOptionChecker:
+    name = "click-option-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
@@ -19,7 +19,7 @@ class ClickBestPracticeChecker:
                 call_def.lineno,
                 call_def.col_offset,
                 self._message_for(call_def),
-                "ClickBestPracticeChecker",
+                "ClickOptionChecker",
             )
 
     def _message_for(self, click_option: ast.Call):

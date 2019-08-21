@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 requires = ["flake8 > 3.0.0", "attrs > 19.0.0"]
 
 setuptools.setup(
-    name="click_best_practices",
+    name="flake8-click",
     license="MIT",
     version="0.1.0",
     description="flake8 extension for click",
@@ -14,11 +14,9 @@ setuptools.setup(
     author="r2c",
     author_email="flake8@r2c.dev",
     url="https://github.com/returntocorp/click-best-practices",
-    py_modules=["click_best_practices"],
+    py_modules=["flake8_click"],
     install_requires=requires,
-    entry_points={
-        "flake8.extension": ["CLC = click_best_practices:ClickBestPracticeChecker"]
-    },
+    entry_points={"flake8.extension": ["CLC = flake8_click:ClickOptionChecker"]},
     classifiers=[
         "Framework :: Flake8",
         "Environment :: Console",
