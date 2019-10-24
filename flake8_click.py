@@ -1,5 +1,5 @@
 import ast
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import attr
 
@@ -24,9 +24,8 @@ class ClickCommandVisitor(ast.NodeVisitor):
     def is_click_option(self, d: ast.Call):
         return hasattr(d.func, "attr") and d.func.attr == "option"
 
-    def get_call_keywords(self, d: ast.Call) -> List[str]:
-        keywords: List[str] = [keyword.arg for keyword in d.keywords]
-        return keywords
+    def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
+        return dict((keyword.arg, keyword.value) for keyword in d.keywords)
 
     def get_call_arguments(self, d: ast.Call) -> List[str]:
         args: List[str] = [arg.s for arg in d.args]
@@ -56,7 +55,7 @@ class ClickOptionHelpVisitor(ClickCommandVisitor):
                     self.option_definitions.append(decorator)
 
     def click_option_has_help_text(self, d: ast.Call) -> bool:
-        return "help" in self.get_call_keywords(d)
+        return "help" in self.get_call_keywords(d).keys()
 
 
 @attr.s(auto_attribs=True)
@@ -65,6 +64,7 @@ class ClickOptionArgumentVisitor(ClickCommandVisitor):
 
     def visit_FunctionDef(self, f: ast.FunctionDef):
         option_param_names: List[str] = []
+        use_cli_command = False
         for decorator in f.decorator_list:
             if not isinstance(decorator, ast.Call):
                 continue
@@ -101,6 +101,81 @@ class ClickOptionArgumentVisitor(ClickCommandVisitor):
             return convert_kebab_to_snake(longest_arg.lower())
         else:
             return max(non_dash_args, key=len).lower()
+
+
+@attr.s
+class ClickLaunchVisitor(ast.NodeVisitor):
+    """
+    Finds unsafe usages of click.launch().
+
+    click.launch() should not be called with user or environmental input, to avoid opening dangerous sites.
+
+    Since the above is difficult, here we just look for non-literal calls.
+
+    TODO: Add taint tracking
+    """
+
+    unsafe_launch_sites = attr.ib(type=List[ast.Call], default=attr.Factory(list))
+    click_alias = attr.ib(default="click")
+    launch_name = attr.ib(type=Optional[str], default=None)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        """
+        Visits:
+            import click
+            import click as alias
+        """
+        for n in node.names:
+            if n.name == self.click_alias:
+                self.click_alias = n.asname or n.name
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """
+        Visits:
+            from click import launch
+            from alias import launch
+            from alias import launch as launch_alias
+        """
+        if node.module == self.click_alias:
+            for n in node.names:
+                if n.name == "launch":
+                    self.launch_name = n.asname or n.name
+
+    def visit_Call(self, node: ast.Call) -> None:
+        """
+        Visits:
+            click.launch(...)
+            alias.launch(...)
+            launch(...)
+            launch_alias(...)
+        as necessary
+        """
+        is_launch = False
+        if not self.launch_name and isinstance(node.func, ast.Attribute):
+            # click module imported
+            if isinstance(node.func.value, ast.Name):
+                if (
+                    node.func.value.id == self.click_alias
+                    and node.func.attr == "launch"
+                ):
+                    is_launch = True
+        elif self.launch_name and isinstance(node.func, ast.Name):
+            # launch method imported
+            if node.func.id == self.launch_name:
+                is_launch = True
+
+        if is_launch:
+            # validate launch argument is literal
+            url_node = None
+            kws = dict((k.arg, k.value) for k in node.keywords)
+
+            if len(node.args) > 0:
+                url_node = node.args[0]
+            elif "url" in kws:
+                url_node = kws["url"]
+
+            if not isinstance(url_node, ast.Str):
+                self.unsafe_launch_sites.append(node)
 
 
 class ClickChecker:
@@ -158,3 +233,24 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
     def _message_for(self, func_def: ast.FunctionDef, options: List[str]):
         return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
+
+
+@attr.s
+class ClickLaunchUsesLiteralChecker(object):
+    name = "click-launch-uses-literal"
+    version = __version__
+    tree = attr.ib(type=ast.Module)
+
+    def run(self):
+        visitor = ClickLaunchVisitor()
+        visitor.visit(self.tree)
+        for site in visitor.unsafe_launch_sites:
+            yield (
+                site.lineno,
+                site.col_offset,
+                self._message_for(site),
+                "ClickLaunchUsesLiteralChecker",
+            )
+
+    def _message_for(self, site: ast.Call):
+        return f"CLC200: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
