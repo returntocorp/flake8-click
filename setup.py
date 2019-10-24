@@ -19,7 +19,7 @@ setuptools.setup(
     entry_points={
         "flake8.extension": [
             "CLC = flake8_click:ClickOptionHelpChecker",
-            "CLC1 = flake8_click:ClickOptionFunctionArgumentChecker"
+            "CLC1 = flake8_click:ClickOptionFunctionArgumentChecker",
         ]
     },
     classifiers=[
