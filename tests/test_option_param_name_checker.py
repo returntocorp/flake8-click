@@ -1,10 +1,13 @@
 import ast
-from flake8_click import ClickOptionFunctionArgumentChecker
 import textwrap
+
+from flake8_click import ClickOptionFunctionArgumentChecker
+
 
 def check_code(s: str):
     checker = ClickOptionFunctionArgumentChecker(tree=ast.parse(textwrap.dedent(s)))
     return list(checker.run())
+
 
 def test_missing_option():
     l = check_code(
@@ -15,6 +18,7 @@ def test_missing_option():
         """
     )
     assert len(l) == 1
+
 
 def test_multiple_missing_option():
     l = check_code(
@@ -27,6 +31,7 @@ def test_multiple_missing_option():
     )
     print(l)
     assert len(l) == 1
+
 
 def test_full_option():
     assert not check_code(

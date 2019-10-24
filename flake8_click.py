@@ -1,11 +1,9 @@
 import ast
+from typing import Dict, List
+
 import attr
-import re
-from typing import List, Dict
 
 __version__ = "0.1.0"
-
-
 
 
 @attr.s(auto_attribs=True)
@@ -13,6 +11,7 @@ class ClickCommandVisitor(ast.NodeVisitor):
     """
     Abstract visitor that visits `click.command`-s
     """
+
     option_definitions: List[ast.Call] = attr.Factory(list)
 
     def visit_FunctionDef(self, f: ast.FunctionDef):
@@ -25,17 +24,18 @@ class ClickCommandVisitor(ast.NodeVisitor):
     def is_click_option(self, d: ast.Call):
         return hasattr(d.func, "attr") and d.func.attr == "option"
 
-    def get_call_keywords(self, d: ast.Call)-> List[str]:
+    def get_call_keywords(self, d: ast.Call) -> List[str]:
         keywords: List[str] = [keyword.arg for keyword in d.keywords]
         return keywords
 
-    def get_call_arguments(self, d: ast.Call)-> List[str]:
+    def get_call_arguments(self, d: ast.Call) -> List[str]:
         args: List[str] = [arg.s for arg in d.args]
         return args
 
-    def get_func_arguments(self, f: ast.FunctionDef)-> List[str]:
+    def get_func_arguments(self, f: ast.FunctionDef) -> List[str]:
         arg_names: List[str] = [arg.arg for arg in f.args.args]
         return arg_names
+
 
 class ClickOptionHelpVisitor(ClickCommandVisitor):
     def visit_FunctionDef(self, f: ast.FunctionDef):
@@ -89,8 +89,8 @@ class ClickOptionArgumentVisitor(ClickCommandVisitor):
         Return param name based on https://click.palletsprojects.com/en/7.x/parameters/#parameter-names
         """
         args = self.get_call_arguments(d)
-        dash_prefixed_args = [arg.strip("-") for arg in args if arg[0] == '-']
-        non_dash_args = [arg for arg in args if arg[0] != '-']
+        dash_prefixed_args = [arg.strip("-") for arg in args if arg[0] == "-"]
+        non_dash_args = [arg for arg in args if arg[0] != "-"]
 
         def convert_kebab_to_snake(string) -> str:
             """ Converts kebab-case to snake_case """
@@ -102,15 +102,18 @@ class ClickOptionArgumentVisitor(ClickCommandVisitor):
         else:
             return max(non_dash_args, key=len).lower()
 
+
 class ClickChecker:
     def run(self):
         pass
 
-    def get_name_call(self, node: ast.Call)->str:
+    def get_name_call(self, node: ast.Call) -> str:
         return node.func.value.id
 
-    def get_name_func(self, node: ast.FunctionDef)->str:
+    def get_name_func(self, node: ast.FunctionDef) -> str:
         return node.name
+
+
 @attr.s
 class ClickOptionHelpChecker(ClickChecker):
     name = "click-option-check"
@@ -131,6 +134,7 @@ class ClickOptionHelpChecker(ClickChecker):
     def _message_for(self, click_option: ast.Call):
         return f"CLC001 @click.option should have `help` text"
 
+
 @attr.s
 class ClickOptionFunctionArgumentChecker(ClickChecker):
     name = "click-option-function-argument-check"
@@ -140,7 +144,9 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
     def run(self):
         visitor = ClickOptionArgumentVisitor()
         visitor.visit(self.tree)
-        func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = visitor.func_def_to_option_call_def
+        func_def_to_option_call_def: Dict[
+            ast.FunctionDef, List[str]
+        ] = visitor.func_def_to_option_call_def
         for func_def, options in func_def_to_option_call_def.items():
             if len(options) > 0:
                 yield (

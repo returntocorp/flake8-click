@@ -1,0 +1,11 @@
+r2c.bandit:
+  violations: {}
+r2c.flake8:
+  violations:
+    e12479e9d82b089a7696102b82afab69:
+      check_id: F811
+      message: redefinition of unused 'build' from line 5
+      path: tests/bad_examples.py
+      severity: 2
+      syntactic_context: '@click.command()'
+      tool_id: r2c.flake8
