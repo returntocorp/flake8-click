@@ -2,6 +2,9 @@ import ast
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 import attr
+import re
+from typing import List, Dict, Union
+import libcst as cst
 
 __version__ = "0.1.0"
 
@@ -55,7 +58,7 @@ class ClickMethodVisitor(ast.NodeVisitor):
     def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
         return dict((keyword.arg, keyword.value) for keyword in d.keywords)
 
-    def get_func_arguments(self, f: ast.FunctionDef) -> List[str]:
+    def get_func_arguments(self, f: Union[ast.FunctionDef, cst.Call])-> List[str]:
         arg_names: List[str] = [arg.arg for arg in f.args.args]
         return arg_names
 
@@ -110,7 +113,7 @@ class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
         self.func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = {}
         super().__init__()
 
-    def visit_FunctionDef(self, f: ast.FunctionDef):
+    def visit_FunctionDef(self, f: Union[ast.FunctionDef, cst.FunctionDef]):
         option_param_names: List[str] = []
         for d in self.click_option_decorators(f):
             param_name = self.get_option_param_name(d)
@@ -119,7 +122,7 @@ class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
 
         self.func_def_to_option_call_def[f] = option_param_names
 
-    def param_in_function_def(self, f: ast.FunctionDef, param_name: str) -> bool:
+    def param_in_function_def(self, f: Union[ast.FunctionDef, cst.FunctionDef], param_name: str) -> bool:
         arg_names = self.get_func_arguments(f)
         return param_name in arg_names
 
@@ -231,7 +234,7 @@ class ClickChecker:
         return node.func.value.id
 
     @staticmethod
-    def get_name_func(node: ast.FunctionDef) -> str:
+    def get_name_func(self, node: Union[ast.FunctionDef, cst.FunctionDef]) -> str:
         return node.name
 
     def response(self, node: ast.AST, *args: Any) -> Tuple[int, int, str, str]:
@@ -269,7 +272,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
         visitor = ClickOptionArgumentVisitor()
         visitor.visit(self.tree)
         func_def_to_option_call_def: Dict[
-            ast.FunctionDef, List[str]
+            Union[ast.FunctionDef, cst.FunctionDef], List[str]
         ] = visitor.func_def_to_option_call_def
         for func_def, options in func_def_to_option_call_def.items():
             if len(options) > 0:
@@ -277,7 +280,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
     def message_for(self, func_def: ast.FunctionDef, *args: Any):
         options = args[0]
-        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
+        return f"CLC100: function `{get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
 
 
 @attr.s
