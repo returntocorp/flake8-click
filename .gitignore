@@ -8,3 +8,5 @@ tests/__pycache__/
 
 #venv
 .venv
+# Ignore bento tool run paths (this line added by `bento init`)
+.bento/
