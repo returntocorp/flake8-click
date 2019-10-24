@@ -1,10 +1,10 @@
 import ast
-from click_best_practices import ClickBestPracticeChecker
+from flake8_click import ClickOptionHelpChecker
 import textwrap
 
 
 def check_code(s: str):
-    checker = ClickBestPracticeChecker(tree=ast.parse(textwrap.dedent(s)))
+    checker = ClickOptionHelpChecker(tree=ast.parse(textwrap.dedent(s)))
     return list(checker.run())
 
 

@@ -16,7 +16,12 @@ setuptools.setup(
     url="https://github.com/returntocorp/click-best-practices",
     py_modules=["flake8_click"],
     install_requires=requires,
-    entry_points={"flake8.extension": ["CLC = flake8_click:ClickOptionChecker"]},
+    entry_points={
+        "flake8.extension": [
+            "CLC = flake8_click:ClickOptionHelpChecker",
+            "CLC1 = flake8_click:ClickOptionFunctionArgumentChecker"
+        ]
+    },
     classifiers=[
         "Framework :: Flake8",
         "Environment :: Console",

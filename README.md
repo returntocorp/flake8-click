@@ -5,6 +5,7 @@ Flake8 plugin for detecting click best practices
 ## Checks
 
 - CLC001: checks for missing help text for `click.option`-s
+- CLC100: missing argument for `click.option`
 
 ## Installing
 
