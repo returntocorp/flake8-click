@@ -14,11 +14,6 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
 
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 88caf5ac484f5c09aedc02167c59c66ff0af0068
-    hooks:
-      - id: flake8
-
   # Seeds third party packages so isort can sort appropriately
   - repo: https://github.com/asottile/seed-isort-config
     rev: "51dfa07d8775040a433388c234d54d84c582beb3" # v1.9.2
