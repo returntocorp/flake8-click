@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Dict, Iterator, List, Set, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 import attr
 
@@ -55,27 +55,26 @@ class ClickMethodVisitor(ast.NodeVisitor):
     def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
         return dict((keyword.arg, keyword.value) for keyword in d.keywords)
 
-    def get_call_arguments(self, d: ast.Call) -> List[str]:
-        args: List[str] = [arg.s for arg in d.args]
-        return args
-
     def get_func_arguments(self, f: ast.FunctionDef) -> List[str]:
         arg_names: List[str] = [arg.arg for arg in f.args.args]
         return arg_names
 
 
-class ClickOptionVisitor(ClickMethodVisitor):
-    METHOD_NAMES: Set[str] = {"option"}
+class ClickDecoratorVisitor(ClickMethodVisitor):
+    METHOD_NAMES: Set[str] = {"option", "argument"}
 
     def __init__(self):
         self.option_definitions: List[ast.Call] = []
         super().__init__()
 
     def method_names(self) -> Set[str]:
-        return ClickOptionVisitor.METHOD_NAMES.copy()
+        return ClickDecoratorVisitor.METHOD_NAMES.copy()
 
     def is_click_option(self, d: ast.Call):
         return self.is_method(d, "option")
+
+    def is_click_argument(self, d: ast.Call):
+        return self.is_method(d, "argument")
 
     def click_option_decorators(self, node: ast.FunctionDef) -> Iterator[ast.Call]:
         for decorator in node.decorator_list:
@@ -84,8 +83,15 @@ class ClickOptionVisitor(ClickMethodVisitor):
             elif self.is_click_option(decorator):
                 yield decorator
 
+    def click_argument_decorators(self, node: ast.FunctionDef) -> Iterator[ast.Call]:
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            elif self.is_click_argument(decorator):
+                yield decorator
 
-class ClickOptionHelpVisitor(ClickOptionVisitor):
+
+class ClickOptionHelpVisitor(ClickDecoratorVisitor):
     def visit_FunctionDef(self, f: ast.FunctionDef):
         """
         Visits each function checking for if its cli.command. If so,
@@ -99,7 +105,7 @@ class ClickOptionHelpVisitor(ClickOptionVisitor):
         return "help" in self.get_call_keywords(d).keys()
 
 
-class ClickOptionArgumentVisitor(ClickOptionVisitor):
+class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
     def __init__(self):
         self.func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = {}
         super().__init__()
@@ -108,7 +114,7 @@ class ClickOptionArgumentVisitor(ClickOptionVisitor):
         option_param_names: List[str] = []
         for d in self.click_option_decorators(f):
             param_name = self.get_option_param_name(d)
-            if not self.param_in_function_def(f, param_name):
+            if param_name is not None and not self.param_in_function_def(f, param_name):
                 option_param_names.append(param_name)
 
         self.func_def_to_option_call_def[f] = option_param_names
@@ -117,12 +123,12 @@ class ClickOptionArgumentVisitor(ClickOptionVisitor):
         arg_names = self.get_func_arguments(f)
         return param_name in arg_names
 
-    def get_option_param_name(self, d: ast.Call) -> str:
+    def get_option_param_name(self, d: ast.Call) -> Optional[str]:
         """
         Return the longest dash-prefixed argument based on
         Return param name based on https://click.palletsprojects.com/en/7.x/parameters/#parameter-names
         """
-        args = self.get_call_arguments(d)
+        args = list(a.s for a in d.args if isinstance(a, ast.Str))
         dash_prefixed_args = [arg.strip("-") for arg in args if arg[0] == "-"]
         non_dash_args = [arg for arg in args if arg[0] != "-"]
 
@@ -130,11 +136,13 @@ class ClickOptionArgumentVisitor(ClickOptionVisitor):
             """ Converts kebab-case to snake_case """
             return string.replace("-", "_")
 
-        if len(non_dash_args) == 0:
+        if dash_prefixed_args:
             longest_arg = max(dash_prefixed_args, key=len)
             return convert_kebab_to_snake(longest_arg.lower())
-        else:
+        elif non_dash_args:
             return max(non_dash_args, key=len).lower()
+        else:
+            return None
 
 
 class ClickLaunchVisitor(ClickMethodVisitor):
@@ -181,16 +189,34 @@ class ClickLaunchVisitor(ClickMethodVisitor):
 
 
 @attr.s
-class ClickChoiceVisitor(ClickOptionVisitor):
-    dict_names = attr.ib(default=set(), type=Set[Tuple[str, str]])
+class ClickNamingVisitor(ClickDecoratorVisitor):
+    malformed_options = attr.ib(
+        type=List[Tuple[ast.AST, str]], default=attr.Factory(list)
+    )
+    malformed_arguments = attr.ib(
+        type=List[Tuple[ast.AST, str]], default=attr.Factory(list)
+    )
+    missing_parameters = attr.ib(type=List[ast.AST], default=attr.Factory(list))
 
-    def visit_Assign(self, node: ast.Assign):
-        if isinstance(node.value, ast.Dict):
-            self.dict_names.add((node.targets[0].id, node.targets[0].ctx))
+    def __attrs_post_init__(self):
+        super().__init__()
 
-    def visit_FunctionDef(self, node: ast.FunctionDef):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         for d in self.click_option_decorators(node):
-            pass
+            if d.args:
+                name = d.args[0]
+                if isinstance(name, ast.Str) and not name.s.startswith("-"):
+                    self.malformed_options.append((node, name.s))
+            else:
+                self.missing_parameters.append(node)
+
+        for d in self.click_argument_decorators(node):
+            if d.args:
+                name = d.args[0]
+                if isinstance(name, ast.Str) and name.s.startswith("-"):
+                    self.malformed_arguments.append((node, name.s))
+            else:
+                self.missing_parameters.append(node)
 
 
 class ClickChecker:
@@ -251,7 +277,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
     def message_for(self, func_def: ast.FunctionDef, *args: Any):
         options = args[0]
-        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
+        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
 
 
 @attr.s
@@ -268,3 +294,45 @@ class ClickLaunchUsesLiteralChecker(ClickChecker):
 
     def message_for(self, site: ast.Call, *args: Any):
         return f"CLC200: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
+
+
+@attr.s
+class ClickNamingChecker(ClickChecker):
+    name = "click-names-are-well-formed"
+    version = __version__
+    tree = attr.ib(type=ast.Module)
+    BAD_OPTION = "option"
+    BAD_ARGUMENT = "argument"
+    MISSING = "missing"
+
+    def run(self):
+        visitor = ClickNamingVisitor()
+        visitor.visit(self.tree)
+        for node, option in visitor.malformed_options:
+            yield self.response(node, option, self.BAD_OPTION)
+        for node, argument in visitor.malformed_arguments:
+            yield self.response(node, argument, self.BAD_ARGUMENT)
+        for node in visitor.missing_parameters:
+            yield self.response(node, "", self.MISSING)
+
+    def message_for(self, node: ast.Call, *args: Any) -> str:
+        name: str = args[0]
+        tpe: str = args[1]
+        if tpe == self.BAD_OPTION:
+            return f"CLC101: option '{name}' should begin with a '-'"
+        elif tpe == self.BAD_ARGUMENT:
+            return f"CLC102: argument '{name}' should not begin with a '-'"
+        elif tpe == self.MISSING:
+            return f"CLC103: missing parameter name"
+
+
+@attr.s
+class ClickPracticeCheckers(object):
+    CHECKER_TYPES = [ClickNamingChecker, ClickOptionFunctionArgumentChecker]
+    name = "click-best-practices"
+    version = __version__
+    tree = attr.ib(type=ast.Module)
+
+    def run(self):
+        checkers = [c(self.tree) for c in self.CHECKER_TYPES]
+        return (r for c in checkers for r in c.run())
