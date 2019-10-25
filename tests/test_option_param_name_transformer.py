@@ -9,6 +9,7 @@ def check_transform(source_py: str) -> str:
     modified_tree = source_tree.visit(transformer)
 
     c = modified_tree.code
+
     return c
 
 def test_transform_simple():
@@ -23,3 +24,27 @@ def build(foo): pass
 def build(foo, dummy): pass
     '''
     assert check_transform(py) == expected
+
+def test_transform_complex():
+    py = '''
+@click.command()
+@click.option('-d', '--dummy')
+@click.option('-c', '--cert')
+def build(foo): pass
+    '''
+    expected = '''
+@click.command()
+@click.option('-d', '--dummy')
+@click.option('-c', '--cert')
+def build(foo, dummy, cert): pass
+    '''
+    assert check_transform(py) == expected
+
+def test_transform_sanity():
+    py = '''
+@click.command()
+@click.option('-d', '--dummy')
+@click.option('-f', '--foo')
+def build(dummy, foo): pass
+    '''
+    assert check_transform(py) == py

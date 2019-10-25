@@ -138,7 +138,6 @@ class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
         args = list(a.s for a in d.args if isinstance(a, ast.Str))
         dash_prefixed_args = [arg.strip("-") for arg in args if arg[0] == "-"]
         non_dash_args = [arg for arg in args if arg[0] != "-"]
-
         def convert_kebab_to_snake(string) -> str:
             """ Converts kebab-case to snake_case """
             return string.replace("-", "_")
@@ -250,24 +249,25 @@ class ClickChecker:
         )
 
 
+
 @attr.s
-class ClickOptionHelpChecker(ClickChecker):
-    name = "click-option-check"
+class ClickOptionFunctionArgumentChecker(ClickChecker):
+    name = "click-option-function-argument-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
     def run(self):
-        visitor = ClickOptionHelpVisitor()
+        visitor = ClickOptionArgumentVisitor()
         visitor.visit(self.tree)
         for call_def in visitor.option_definitions:
             yield self.response(call_def)
 
-    def message_for(self, click_option: ast.Call, *args: Any):
-        return f"CLC001 @click.option should have `help` text"
 
+    def message_for(self, func_def: Union[ast.FunctionDef, cst.FunctionDef], options: List[str]):
+        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
 
 @attr.s
-class ClickOptionFunctionArgumentChecker(ClickChecker):
+class ClickCommandArgumentTransform(ClickChecker):
     name = "click-option-function-argument-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
