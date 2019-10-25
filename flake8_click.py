@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 import attr
 import re
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 import libcst as cst
 
 __version__ = "0.1.0"
@@ -58,8 +58,12 @@ class ClickMethodVisitor(ast.NodeVisitor):
     def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
         return dict((keyword.arg, keyword.value) for keyword in d.keywords)
 
-    def get_func_arguments(self, f: Union[ast.FunctionDef, cst.Call])-> List[str]:
-        arg_names: List[str] = [arg.arg for arg in f.args.args]
+    def get_func_arguments(self, f: Union[ast.FunctionDef, cst.FunctionDef])-> List[str]:
+        arg_names: List[str] = []
+        if isinstance(f, ast.FunctionDef):
+            arg_names = [arg.arg for arg in f.args.args]
+        else:
+            arg_names = [param.name for param in f.params.params]
         return arg_names
 
 

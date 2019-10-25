@@ -3,7 +3,6 @@ import textwrap
 
 from flake8_click import ClickOptionFunctionArgumentChecker
 
-
 def check_code(s: str):
     checker = ClickOptionFunctionArgumentChecker(tree=ast.parse(textwrap.dedent(s)))
     return list(checker.run())
