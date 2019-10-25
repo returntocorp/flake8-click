@@ -2,7 +2,8 @@ import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
-requires = ["flake8 > 3.0.0", "attrs > 19.0.0"]
+
+requires = ["flake8 > 3.6.0", "attrs > 19.0.0"]
 
 setuptools.setup(
     name="flake8-click",
@@ -19,7 +20,8 @@ setuptools.setup(
     entry_points={
         "flake8.extension": [
             "CLC = flake8_click:ClickOptionHelpChecker",
-            "CLC1 = flake8_click:ClickOptionFunctionArgumentChecker",
+            "CLC1 = flake8_click:ClickPracticeCheckers",
+            "CLC2 = flake8_click:ClickLaunchUsesLiteralChecker",
         ]
     },
     classifiers=[
