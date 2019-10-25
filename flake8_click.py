@@ -1,5 +1,5 @@
 import ast
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import attr
 
@@ -7,22 +7,59 @@ __version__ = "0.1.0"
 
 
 @attr.s(auto_attribs=True)
-class ClickCommandVisitor(ast.NodeVisitor):
+class ClickMethodVisitor(ast.NodeVisitor):
     """
     Abstract visitor that visits `click.command`-s
     """
 
-    option_definitions: List[ast.Call] = attr.Factory(list)
+    METHOD_NAMES: Set[str] = {"command", "option"}
 
-    def visit_FunctionDef(self, f: ast.FunctionDef):
-        """ Abstract Visiter-specific logic to be implemented by inheriters """
-        pass
+    option_definitions: List[ast.Call] = attr.Factory(list)
+    click_alias: str = "click"
+    aliases: Dict[str, str] = attr.Factory(dict)
+
+    def method_names(self) -> Set[str]:
+        return ClickMethodVisitor.METHOD_NAMES
+
+    def visit_Import(self, node: ast.Import) -> None:
+        """
+        Visits:
+            import click
+            import click as alias
+        """
+        for n in node.names:
+            if n.name == self.click_alias:
+                self.click_alias = n.asname or n.name
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """
+        Visits:
+            from click import ...
+            from alias import ...
+            from alias import ... as ...
+        """
+        if node.module == self.click_alias:
+            for n in node.names:
+                if n.name in self.method_names():
+                    self.aliases[n.name] = n.asname or n.name
+
+    def is_method(self, node: ast.Call, name: str):
+        if isinstance(node.func, ast.Attribute):
+            # click module imported
+            if isinstance(node.func.value, ast.Name):
+                if node.func.value.id == self.click_alias and node.func.attr == name:
+                    return True
+        elif isinstance(node.func, ast.Name) and name in self.aliases:
+            # method imported from click
+            if node.func.id == self.aliases[name]:
+                return True
+        return False
 
     def is_click_command(self, d: ast.Call):
-        return hasattr(d.func, "attr") and d.func.attr == "command"
+        return self.is_method(d, "command")
 
     def is_click_option(self, d: ast.Call):
-        return hasattr(d.func, "attr") and d.func.attr == "option"
+        return self.is_method(d, "option")
 
     def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
         return dict((keyword.arg, keyword.value) for keyword in d.keywords)
@@ -36,7 +73,7 @@ class ClickCommandVisitor(ast.NodeVisitor):
         return arg_names
 
 
-class ClickOptionHelpVisitor(ClickCommandVisitor):
+class ClickOptionHelpVisitor(ClickMethodVisitor):
     def visit_FunctionDef(self, f: ast.FunctionDef):
         """
         Visits each function checking for if its cli.command. If so,
@@ -59,7 +96,7 @@ class ClickOptionHelpVisitor(ClickCommandVisitor):
 
 
 @attr.s(auto_attribs=True)
-class ClickOptionArgumentVisitor(ClickCommandVisitor):
+class ClickOptionArgumentVisitor(ClickMethodVisitor):
     func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = attr.Factory(dict)
 
     def visit_FunctionDef(self, f: ast.FunctionDef):
@@ -104,7 +141,7 @@ class ClickOptionArgumentVisitor(ClickCommandVisitor):
 
 
 @attr.s
-class ClickLaunchVisitor(ast.NodeVisitor):
+class ClickLaunchVisitor(ClickMethodVisitor):
     """
     Finds unsafe usages of click.launch().
 
@@ -115,31 +152,11 @@ class ClickLaunchVisitor(ast.NodeVisitor):
     TODO: Add taint tracking
     """
 
+    METHOD_NAMES = {"launch"}
     unsafe_launch_sites = attr.ib(type=List[ast.Call], default=attr.Factory(list))
-    click_alias = attr.ib(default="click")
-    launch_name = attr.ib(type=Optional[str], default=None)
 
-    def visit_Import(self, node: ast.Import) -> None:
-        """
-        Visits:
-            import click
-            import click as alias
-        """
-        for n in node.names:
-            if n.name == self.click_alias:
-                self.click_alias = n.asname or n.name
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        """
-        Visits:
-            from click import launch
-            from alias import launch
-            from alias import launch as launch_alias
-        """
-        if node.module == self.click_alias:
-            for n in node.names:
-                if n.name == "launch":
-                    self.launch_name = n.asname or n.name
+    def method_names(self):
+        return ClickLaunchVisitor.METHOD_NAMES
 
     def visit_Call(self, node: ast.Call) -> None:
         """
@@ -150,21 +167,7 @@ class ClickLaunchVisitor(ast.NodeVisitor):
             launch_alias(...)
         as necessary
         """
-        is_launch = False
-        if not self.launch_name and isinstance(node.func, ast.Attribute):
-            # click module imported
-            if isinstance(node.func.value, ast.Name):
-                if (
-                    node.func.value.id == self.click_alias
-                    and node.func.attr == "launch"
-                ):
-                    is_launch = True
-        elif self.launch_name and isinstance(node.func, ast.Name):
-            # launch method imported
-            if node.func.id == self.launch_name:
-                is_launch = True
-
-        if is_launch:
+        if self.is_method(node, "launch"):
             # validate launch argument is literal
             url_node = None
             kws = dict((k.arg, k.value) for k in node.keywords)
@@ -176,6 +179,17 @@ class ClickLaunchVisitor(ast.NodeVisitor):
 
             if not isinstance(url_node, ast.Str):
                 self.unsafe_launch_sites.append(node)
+
+
+@attr.s
+class ClickChoiceVisitor(object):
+    dict_name = attr.ib(default=None, type=Optional[str])
+    dict_context = attr.ib(default=None, type=Optional[str])
+
+    def visit_Assign(self, node: ast.Assign):
+        if isinstance(node.value, ast.Dict):
+            self.dict_name = node.targets[0].id
+            self.dict_context = node.targets[0].ctx
 
 
 class ClickChecker:
