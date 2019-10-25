@@ -12,7 +12,7 @@ def check_code(s: str):
 def test_missing_option():
     l = check_code(
         """
-          @cli.command()
+          @click.command()
           @click.option('-d', '--dummy')
           def build(foo): pass
         """
@@ -23,7 +23,7 @@ def test_missing_option():
 def test_multiple_missing_option():
     l = check_code(
         """
-          @cli.command()
+          @click.command()
           @click.option('-d', '--dummy')
           @click.option('-f', '--fummy')
           def build(foo): pass
@@ -36,7 +36,7 @@ def test_multiple_missing_option():
 def test_full_option():
     assert not check_code(
         """
-          @cli.command()
+          @click.command()
           @click.option('-d', '--dummy')
           def build(dummy): pass
         """

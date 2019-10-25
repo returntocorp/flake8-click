@@ -1,25 +1,22 @@
 import ast
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterator, List, Set, Tuple
 
 import attr
 
 __version__ = "0.1.0"
 
 
-@attr.s(auto_attribs=True)
 class ClickMethodVisitor(ast.NodeVisitor):
     """
-    Abstract visitor that visits `click.command`-s
+    Abstract visitor that visits click calls
     """
 
-    METHOD_NAMES: Set[str] = {"command", "option"}
-
-    option_definitions: List[ast.Call] = attr.Factory(list)
-    click_alias: str = "click"
-    aliases: Dict[str, str] = attr.Factory(dict)
+    def __init__(self):
+        self.click_alias: str = "click"
+        self.aliases: Dict[str, str] = {}
 
     def method_names(self) -> Set[str]:
-        return ClickMethodVisitor.METHOD_NAMES
+        pass
 
     def visit_Import(self, node: ast.Import) -> None:
         """
@@ -55,12 +52,6 @@ class ClickMethodVisitor(ast.NodeVisitor):
                 return True
         return False
 
-    def is_click_command(self, d: ast.Call):
-        return self.is_method(d, "command")
-
-    def is_click_option(self, d: ast.Call):
-        return self.is_method(d, "option")
-
     def get_call_keywords(self, d: ast.Call) -> Dict[str, ast.Expr]:
         return dict((keyword.arg, keyword.value) for keyword in d.keywords)
 
@@ -73,46 +64,52 @@ class ClickMethodVisitor(ast.NodeVisitor):
         return arg_names
 
 
-class ClickOptionHelpVisitor(ClickMethodVisitor):
+class ClickOptionVisitor(ClickMethodVisitor):
+    METHOD_NAMES: Set[str] = {"option"}
+
+    def __init__(self):
+        self.option_definitions: List[ast.Call] = []
+        super().__init__()
+
+    def method_names(self) -> Set[str]:
+        return ClickOptionVisitor.METHOD_NAMES.copy()
+
+    def is_click_option(self, d: ast.Call):
+        return self.is_method(d, "option")
+
+    def click_option_decorators(self, node: ast.FunctionDef) -> Iterator[ast.Call]:
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            elif self.is_click_option(decorator):
+                yield decorator
+
+
+class ClickOptionHelpVisitor(ClickOptionVisitor):
     def visit_FunctionDef(self, f: ast.FunctionDef):
         """
         Visits each function checking for if its cli.command. If so,
         verifies the options have default and help text
         """
-        use_cli_command = False
-        for decorator in f.decorator_list:
-            if not isinstance(decorator, ast.Call):
-                continue
-            if self.is_click_command(decorator):
-                use_cli_command = True
-            elif self.is_click_option(decorator):
-                if not use_cli_command:
-                    continue
-                if not self.click_option_has_help_text(decorator):
-                    self.option_definitions.append(decorator)
+        for d in self.click_option_decorators(f):
+            if not self.click_option_has_help_text(d):
+                self.option_definitions.append(d)
 
     def click_option_has_help_text(self, d: ast.Call) -> bool:
         return "help" in self.get_call_keywords(d).keys()
 
 
-@attr.s(auto_attribs=True)
-class ClickOptionArgumentVisitor(ClickMethodVisitor):
-    func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = attr.Factory(dict)
+class ClickOptionArgumentVisitor(ClickOptionVisitor):
+    def __init__(self):
+        self.func_def_to_option_call_def: Dict[ast.FunctionDef, List[str]] = {}
+        super().__init__()
 
     def visit_FunctionDef(self, f: ast.FunctionDef):
         option_param_names: List[str] = []
-        use_cli_command = False
-        for decorator in f.decorator_list:
-            if not isinstance(decorator, ast.Call):
-                continue
-            if self.is_click_command(decorator):
-                use_cli_command = True
-            elif self.is_click_option(decorator):
-                if not use_cli_command:
-                    continue
-                param_name = self.get_option_param_name(decorator)
-                if not self.param_in_function_def(f, param_name):
-                    option_param_names.append(param_name)
+        for d in self.click_option_decorators(f):
+            param_name = self.get_option_param_name(d)
+            if not self.param_in_function_def(f, param_name):
+                option_param_names.append(param_name)
 
         self.func_def_to_option_call_def[f] = option_param_names
 
@@ -140,7 +137,6 @@ class ClickOptionArgumentVisitor(ClickMethodVisitor):
             return max(non_dash_args, key=len).lower()
 
 
-@attr.s
 class ClickLaunchVisitor(ClickMethodVisitor):
     """
     Finds unsafe usages of click.launch().
@@ -153,7 +149,10 @@ class ClickLaunchVisitor(ClickMethodVisitor):
     """
 
     METHOD_NAMES = {"launch"}
-    unsafe_launch_sites = attr.ib(type=List[ast.Call], default=attr.Factory(list))
+
+    def __init__(self):
+        self.unsafe_launch_sites: List[ast.Call] = []
+        super().__init__()
 
     def method_names(self):
         return ClickLaunchVisitor.METHOD_NAMES
@@ -182,14 +181,16 @@ class ClickLaunchVisitor(ClickMethodVisitor):
 
 
 @attr.s
-class ClickChoiceVisitor(object):
-    dict_name = attr.ib(default=None, type=Optional[str])
-    dict_context = attr.ib(default=None, type=Optional[str])
+class ClickChoiceVisitor(ClickOptionVisitor):
+    dict_names = attr.ib(default=set(), type=Set[Tuple[str, str]])
 
     def visit_Assign(self, node: ast.Assign):
         if isinstance(node.value, ast.Dict):
-            self.dict_name = node.targets[0].id
-            self.dict_context = node.targets[0].ctx
+            self.dict_names.add((node.targets[0].id, node.targets[0].ctx))
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        for d in self.click_option_decorators(node):
+            pass
 
 
 class ClickChecker:

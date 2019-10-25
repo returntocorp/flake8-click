@@ -4,14 +4,14 @@ import click
 # should trigger CLC001
 @click.command()
 @click.option("-d")
-def build(d):
+def bad_help(d):
     pass
 
 
 # should trigger CLC100
 @click.command()
 @click.option("-d", help="Hi mom")
-def build():
+def bad_option():
     pass
 
 
