@@ -1,5 +1,5 @@
 import ast
-from typing import Dict, Iterator, List, Set, Tuple
+from typing import Any, Dict, Iterator, List, Set, Tuple
 
 import attr
 
@@ -197,11 +197,24 @@ class ClickChecker:
     def run(self):
         pass
 
-    def get_name_call(self, node: ast.Call) -> str:
+    def message_for(self, node: ast.AST, *args: Any) -> str:
+        pass
+
+    @staticmethod
+    def get_name_call(node: ast.Call) -> str:
         return node.func.value.id
 
-    def get_name_func(self, node: ast.FunctionDef) -> str:
+    @staticmethod
+    def get_name_func(node: ast.FunctionDef) -> str:
         return node.name
+
+    def response(self, node: ast.AST, *args: Any) -> Tuple[int, int, str, str]:
+        return (
+            node.lineno,
+            node.col_offset,
+            self.message_for(node, *args),
+            str(type(self)),
+        )
 
 
 @attr.s
@@ -214,14 +227,9 @@ class ClickOptionHelpChecker(ClickChecker):
         visitor = ClickOptionHelpVisitor()
         visitor.visit(self.tree)
         for call_def in visitor.option_definitions:
-            yield (
-                call_def.lineno,
-                call_def.col_offset,
-                self._message_for(call_def),
-                "ClickOptionHelpChecker",
-            )
+            yield self.response(call_def)
 
-    def _message_for(self, click_option: ast.Call):
+    def message_for(self, click_option: ast.Call, *args: Any):
         return f"CLC001 @click.option should have `help` text"
 
 
@@ -239,19 +247,15 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
         ] = visitor.func_def_to_option_call_def
         for func_def, options in func_def_to_option_call_def.items():
             if len(options) > 0:
-                yield (
-                    func_def.lineno,
-                    func_def.col_offset,
-                    self._message_for(func_def, options),
-                    "ClickOptionFunctionArgumentChecker",
-                )
+                yield self.response(func_def, options)
 
-    def _message_for(self, func_def: ast.FunctionDef, options: List[str]):
+    def message_for(self, func_def: ast.FunctionDef, *args: Any):
+        options = args[0]
         return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
 
 
 @attr.s
-class ClickLaunchUsesLiteralChecker(object):
+class ClickLaunchUsesLiteralChecker(ClickChecker):
     name = "click-launch-uses-literal"
     version = __version__
     tree = attr.ib(type=ast.Module)
@@ -260,12 +264,7 @@ class ClickLaunchUsesLiteralChecker(object):
         visitor = ClickLaunchVisitor()
         visitor.visit(self.tree)
         for site in visitor.unsafe_launch_sites:
-            yield (
-                site.lineno,
-                site.col_offset,
-                self._message_for(site),
-                "ClickLaunchUsesLiteralChecker",
-            )
+            yield self.response(site)
 
-    def _message_for(self, site: ast.Call):
+    def message_for(self, site: ast.Call, *args: Any):
         return f"CLC200: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
