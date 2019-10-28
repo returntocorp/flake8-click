@@ -236,7 +236,6 @@ class ClickChecker:
     def get_name_call(node: ast.Call) -> str:
         return node.func.value.id
 
-    @staticmethod
     def get_name_func(self, node: Union[ast.FunctionDef, cst.FunctionDef]) -> str:
         return node.name
 
@@ -247,27 +246,24 @@ class ClickChecker:
             self.message_for(node, *args),
             str(type(self)),
         )
-
-
-
 @attr.s
-class ClickOptionFunctionArgumentChecker(ClickChecker):
-    name = "click-option-function-argument-check"
+class ClickOptionHelpChecker(ClickChecker):
+    name = "click-option-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
     def run(self):
-        visitor = ClickOptionArgumentVisitor()
+        visitor = ClickOptionHelpVisitor()
         visitor.visit(self.tree)
         for call_def in visitor.option_definitions:
             yield self.response(call_def)
 
+    def message_for(self, click_option: ast.Call, *args: Any):
+        return f"CLC001 @click.option should have `help` text"
 
-    def message_for(self, func_def: Union[ast.FunctionDef, cst.FunctionDef], options: List[str]):
-        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
 
 @attr.s
-class ClickCommandArgumentTransform(ClickChecker):
+class ClickOptionFunctionArgumentChecker(ClickChecker):
     name = "click-option-function-argument-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
@@ -282,10 +278,8 @@ class ClickCommandArgumentTransform(ClickChecker):
             if len(options) > 0:
                 yield self.response(func_def, options)
 
-    def message_for(self, func_def: ast.FunctionDef, *args: Any):
-        options = args[0]
-        return f"CLC100: function `{get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
-
+    def message_for(self, func_def: Union[ast.FunctionDef, cst.FunctionDef], options: List[str]):
+        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`{'-s' if len(options) > 0 else ''}"
 
 @attr.s
 class ClickLaunchUsesLiteralChecker(ClickChecker):
