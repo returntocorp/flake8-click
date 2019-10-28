@@ -1,7 +1,7 @@
 
 import libcst as cst
 import textwrap
-from flake8_click import ClickCommandArgumentAddTransformer
+from transformers.flake8_transformer import ClickCommandArgumentAddTransformer
 
 def check_transform(source_py: str) -> str:
     source_tree = cst.parse_module(source_py)
