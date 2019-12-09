@@ -278,7 +278,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
     def message_for(self, func_def: ast.FunctionDef, *args: Any):
         options = args[0]
-        return f"{self.name}: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
+        return f"{self.name} function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
 
 
 @attr.s
@@ -294,7 +294,7 @@ class ClickLaunchUsesLiteralChecker(ClickChecker):
             yield self.response(site)
 
     def message_for(self, site: ast.Call, *args: Any):
-        return f"{self.name}: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
+        return f"{self.name} calls to click.launch() should use literal urls to prevent arbitrary site redirects"
 
 
 @attr.s
@@ -320,11 +320,11 @@ class ClickNamingChecker(ClickChecker):
         name: str = args[0]
         tpe: str = args[1]
         if tpe == self.BAD_OPTION:
-            return f"{self.name}: option '{name}' should begin with a '-'"
+            return f"{self.name} option '{name}' should begin with a '-'"
         elif tpe == self.BAD_ARGUMENT:
-            return f"{self.name}: argument '{name}' should not begin with a '-'"
+            return f"{self.name} argument '{name}' should not begin with a '-'"
         elif tpe == self.MISSING:
-            return f"{self.name}: missing parameter name"
+            return f"{self.name} missing parameter name"
 
 
 @attr.s
