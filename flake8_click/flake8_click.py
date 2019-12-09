@@ -1,9 +1,10 @@
 import ast
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
+
 import attr
 
-__version__ = "0.1.0"
+from flake8_click import __version__
 
 
 class ClickMethodVisitor(ast.NodeVisitor):
@@ -245,7 +246,7 @@ class ClickChecker:
 
 @attr.s
 class ClickOptionHelpChecker(ClickChecker):
-    name = "click-option-check"
+    name = "r2c-click-option-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
@@ -256,12 +257,12 @@ class ClickOptionHelpChecker(ClickChecker):
             yield self.response(call_def)
 
     def message_for(self, click_option: ast.Call, *args: Any):
-        return f"CLC001 @click.option should have `help` text"
+        return f"{self.name} @click.option should have `help` text"
 
 
 @attr.s
 class ClickOptionFunctionArgumentChecker(ClickChecker):
-    name = "click-option-function-argument-check"
+    name = "r2c-click-option-function-argument-check"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
@@ -277,7 +278,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
     def message_for(self, func_def: ast.FunctionDef, *args: Any):
         options = args[0]
-        return f"CLC100: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
+        return f"{self.name}: function `{self.get_name_func(func_def)}` missing parameter `{','.join(options)}` for `@click.option`"
 
 
 @attr.s
@@ -293,12 +294,12 @@ class ClickLaunchUsesLiteralChecker(ClickChecker):
             yield self.response(site)
 
     def message_for(self, site: ast.Call, *args: Any):
-        return f"CLC200: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
+        return f"{self.name}: calls to click.launch() should use literal urls to prevent arbitrary site redirects"
 
 
 @attr.s
 class ClickNamingChecker(ClickChecker):
-    name = "click-names-are-well-formed"
+    name = "r2c-click-names-are-well-formed"
     version = __version__
     tree = attr.ib(type=ast.Module)
     BAD_OPTION = "option"
@@ -319,17 +320,17 @@ class ClickNamingChecker(ClickChecker):
         name: str = args[0]
         tpe: str = args[1]
         if tpe == self.BAD_OPTION:
-            return f"CLC101: option '{name}' should begin with a '-'"
+            return f"{self.name}: option '{name}' should begin with a '-'"
         elif tpe == self.BAD_ARGUMENT:
-            return f"CLC102: argument '{name}' should not begin with a '-'"
+            return f"{self.name}: argument '{name}' should not begin with a '-'"
         elif tpe == self.MISSING:
-            return f"CLC103: missing parameter name"
+            return f"{self.name}: missing parameter name"
 
 
 @attr.s
 class ClickPracticeCheckers(object):
     CHECKER_TYPES = [ClickNamingChecker, ClickOptionFunctionArgumentChecker]
-    name = "click-best-practices"
+    name = "r2c-click-best-practices"
     version = __version__
     tree = attr.ib(type=ast.Module)
 

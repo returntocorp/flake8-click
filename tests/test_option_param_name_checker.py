@@ -1,7 +1,7 @@
 import ast
 import textwrap
 
-from flake8_click import ClickOptionFunctionArgumentChecker
+from flake8_click.flake8_click import ClickOptionFunctionArgumentChecker
 
 
 def check_code(s: str):

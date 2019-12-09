@@ -2,7 +2,7 @@ import ast
 import textwrap
 from typing import List
 
-from flake8_click import ClickLaunchUsesLiteralChecker, ClickLaunchVisitor
+from flake8_click.flake8_click import ClickLaunchUsesLiteralChecker, ClickLaunchVisitor
 
 
 def _visit(s: str) -> List[ast.Call]:
