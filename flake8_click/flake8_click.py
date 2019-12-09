@@ -283,7 +283,7 @@ class ClickOptionFunctionArgumentChecker(ClickChecker):
 
 @attr.s
 class ClickLaunchUsesLiteralChecker(ClickChecker):
-    name = "click-launch-uses-literal"
+    name = "r2c-click-launch-uses-literal"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
@@ -329,7 +329,7 @@ class ClickNamingChecker(ClickChecker):
 
 @attr.s
 class ClickPracticeCheckers(object):
-    CHECKER_TYPES = [ClickNamingChecker, ClickOptionFunctionArgumentChecker]
+    CHECKER_TYPES = [ClickNamingChecker, ClickOptionFunctionArgumentChecker, ClickLaunchUsesLiteralChecker]
     name = "r2c-click-best-practices"
     version = __version__
     tree = attr.ib(type=ast.Module)
