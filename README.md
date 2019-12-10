@@ -4,12 +4,12 @@ Flake8 plugin for detecting click best practices
 
 ## Checks
 
-- CLC001: checks for missing help text for `click.option`-s
-- CLC100: missing argument for `click.option`
-- CLC101: click option name does not begin with '-'
-- CLC102: click argument name begins with '-'
-- CLC103: click parameter is missing name
-- CLC200: `click.launch` may be called with user input, leading to a security
+- `r2c-click-option-function-argument-check`: missing argument for `click.option`
+- `r2c-click-names-are-well-formed`: checks for
+  - click option name does not begin with '-'
+  - click argument name begins with '-'
+  - click parameter is missing name
+- `r2c-click-launch-uses-literal`: `click.launch` may be called with user input, leading to a security
   vulnerability
 
 ## Installing

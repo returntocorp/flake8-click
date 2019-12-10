@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flake8-click"
-version = "0.2.2"
+version = "0.2.3"
 description = ""
 authors = ["R2C <hello@returntocorp.com>"]
 homepage = "https://r2c.dev"
@@ -17,7 +17,7 @@ exclude = ["tests/**", "transformers/**"]
 
 [tool.poetry.dependencies]
 attrs = "*"
-python = "^3.7"
+python = "^3.6"
 flake8 = "^3.7"
 libcst = "^0.2.4"
 click = "^7.0"
