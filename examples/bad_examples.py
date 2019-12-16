@@ -39,3 +39,7 @@ def missing_option():
 # should trigger CLC200
 def bad_launch(x: str) -> None:
     click.launch(x)
+
+# should not trigger
+@click.command('--shout/--no-shout', default=False)
+def build(shout): pass
