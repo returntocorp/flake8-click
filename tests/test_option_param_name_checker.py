@@ -58,3 +58,11 @@ def test_full_option():
           def build(dummy): pass
         """
     )
+
+def test_bool_option_with_slash():
+    assert not check_code(
+        """
+          @click.option('--shout/--no-shout', default=False)
+          def build(shout): pass
+        """
+    )

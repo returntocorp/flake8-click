@@ -139,6 +139,8 @@ class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
 
         if dash_prefixed_args:
             longest_arg = max(dash_prefixed_args, key=len)
+            if "/" in longest_arg:
+                longest_arg = longest_arg.split("/")[0]
             return convert_kebab_to_snake(longest_arg.lower())
         elif non_dash_args:
             return max(non_dash_args, key=len).lower()
