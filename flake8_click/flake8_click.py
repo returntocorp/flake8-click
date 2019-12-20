@@ -115,10 +115,19 @@ class ClickOptionArgumentVisitor(ClickDecoratorVisitor):
         option_param_names: List[str] = []
         for d in self.click_option_decorators(f):
             param_name = self.get_option_param_name(d)
-            if param_name is not None and not self.param_in_function_def(f, param_name):
+            if param_name is not None and self.is_exposed_value(d) and not self.param_in_function_def(f, param_name):
                 option_param_names.append(param_name)
 
         self.func_def_to_option_call_def[f] = option_param_names
+
+    def is_exposed_value(self, decorator: ast.Call) -> bool:
+        for keyword in decorator.keywords:
+            if keyword.arg == "expose_value":
+                if isinstance(keyword.value, ast.Name) and keyword.value.id == "False":
+                    return False
+                elif isinstance(keyword.value, ast.NameConstant) and keyword.value.value == False:
+                    return False
+        return True 
 
     def param_in_function_def(self, f: ast.FunctionDef, param_name: str) -> bool:
         arg_names = self.get_func_arguments(f)
