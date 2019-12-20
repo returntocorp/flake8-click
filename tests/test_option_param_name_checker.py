@@ -59,6 +59,7 @@ def test_full_option():
         """
     )
 
+
 def test_bool_option_with_slash():
     assert not check_code(
         """
@@ -120,5 +121,22 @@ def run_command(
     info, host, port, reload, debugger, eager_loading, with_threads, cert, extra_files
 ):
     debug = get_debug_flag()
+"""
+    assert len(check_code(code)) == 0
+
+def test_has_kwargs():
+    code = """
+@main.command()
+@click.option("--address", help="the seller/buyer address", type=str)
+@click.option("--limit", help="default 50; max 1000.", type=int)
+@click.option("--offset", help="start with 0; default 0.", type=int)
+@click.option("--symbol", help="symbol", type=str)
+@click.option(
+    "--total",
+    help="total number required, 0 for not required and 1 for required; default not required, return total=-1 in response",
+    type=int,
+)
+def open_orders(hello=False, **kwargs):
+    dex_run("get_open_orders", hello="world", **kwargs)
 """
     assert len(check_code(code)) == 0
