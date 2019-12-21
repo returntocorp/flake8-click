@@ -18,7 +18,7 @@ packages = [
   { include = "flake8_click"},
 ]
 exclude = ["tests/**", "transformers/**"]
-keywords = ["flake8", "markdown", "lint", "linter", "bento", "r2c", "click"]
+keywords = ["flake8", "lint", "linter", "bento", "r2c", "click"]
 
 
 [tool.poetry.dependencies]
