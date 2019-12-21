@@ -1,18 +1,25 @@
 [tool.poetry]
 name = "flake8-click"
 version = "0.2.5"
-description = ""
+description = "Flake8 linter for the Click module"
+readme = "README.md"
 authors = ["R2C <hello@returntocorp.com>"]
 homepage = "https://r2c.dev"
 classifiers=[
+  "Environment :: Console",
+  "Framework :: Flake8",
+  "Framework :: Click",
   "Programming Language :: Python :: 3",
   "License :: Other/Proprietary License",
   "Operating System :: OS Independent",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Quality Assurance",
 ]
 packages = [
   { include = "flake8_click"},
 ]
 exclude = ["tests/**", "transformers/**"]
+keywords = ["flake8", "markdown", "lint", "linter", "bento", "r2c", "click"]
 
 
 [tool.poetry.dependencies]
