@@ -1,10 +1,10 @@
-# click-linter
+# flake8-click
 
-Flake8 plugin for detecting click best practices
+Flake8 plugin for detecting [Click](https://click.palletsprojects.com/en/7.x/) best practices, by [r2c](https://r2c.dev). Available by default alongside other great tools in [Bento](https://bento.dev).
 
 ## Checks
 
-- `r2c-click-option-function-argument-check`: missing argument for `click.option`
+- `r2c-click-option-function-argument-check`: missing a matching function argument for options defined with `click.option`
 - `r2c-click-names-are-well-formed`: checks for
   - click option name does not begin with '-'
   - click argument name begins with '-'
@@ -14,35 +14,21 @@ Flake8 plugin for detecting click best practices
 
 ## Installing
 
-```
-$ python -m pip install flake8-click
+```console
+$ pip install flake8-click
 ```
 
 _Specify `python2` or `python3` to install for a specific Python version._
 
 And double check that it was installed correctly:
 
-```
-$ python -m flake8 -h
-Usage: flake8 [options] file file ...
-
-...
-
-Installed plugins: flake8-click : 0.1.0, mccabe: 0.5.3, pycodestyle: 2.2.0, pyflakes: 1.3.0
+```console
+$ flake8 --version
+3.7.9 (flake8-click: 0.2.5, mccabe: 0.6.1, pycodestyle: 2.5.0, pyflakes: 2.1.1)
 ```
 
-Note the `flake8-click: 0.1.0`.
+## Usage
 
-## Using
-
-Click best practices is a flake8 plugin. You can easily use this plugin by
-
-```
-$ python -m flake8 --select=CLC /path/to/code
-```
-
-## Testing
-
-```
-$ pytest
+```console
+$ flake8 --select=r2c-click /path/to/code
 ```

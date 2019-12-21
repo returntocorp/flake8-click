@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flake8-click"
-version = "0.2.4"
+version = "0.2.5"
 description = ""
 authors = ["R2C <hello@returntocorp.com>"]
 homepage = "https://r2c.dev"
