@@ -8,7 +8,6 @@ homepage = "https://r2c.dev"
 classifiers=[
   "Environment :: Console",
   "Framework :: Flake8",
-  "Framework :: Click",
   "Programming Language :: Python :: 3",
   "License :: Other/Proprietary License",
   "Operating System :: OS Independent",
