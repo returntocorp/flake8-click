@@ -356,7 +356,7 @@ class ClickPracticeCheckers(object):
         ClickOptionFunctionArgumentChecker,
         ClickLaunchUsesLiteralChecker,
     ]
-    name = "r2c-click-best-practices"
+    name = "flake8-click"
     version = __version__
     tree = attr.ib(type=ast.Module)
 
