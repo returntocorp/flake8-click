@@ -1,7 +1,7 @@
 import ast
 import textwrap
 
-from flake8_click.flake8_click import ClickOptionFunctionArgumentChecker
+from flake8_click.flake8_click import ClickOptionFunctionArgumentChecker, ClickOptionArgumentVisitor
 
 
 def check_code(s: str):
@@ -71,6 +71,7 @@ def test_bool_option_with_slash():
 
 def test_expose_value_false():
     code = """
+import click
 @click.command("run", short_help="Run a development server.")
 @click.option("--host", "-h", default="127.0.0.1", help="The interface to bind to.")
 @click.option("--port", "-p", default=5000, help="The port to bind to.")
@@ -126,6 +127,7 @@ def run_command(
 
 def test_has_kwargs():
     code = """
+import click
 @main.command()
 @click.option("--address", help="the seller/buyer address", type=str)
 @click.option("--limit", help="default 50; max 1000.", type=int)
@@ -140,3 +142,36 @@ def open_orders(hello=False, **kwargs):
     dex_run("get_open_orders", hello="world", **kwargs)
 """
     assert len(check_code(code)) == 0
+
+def test_no_dash():
+    code = """
+from click import manager, argument, option
+@manager.command()
+@argument('email')
+@argument('name')
+@argument('inviter_email')
+@option('--org', 'organization', default='default', help="The organization the user belongs to (leave blank for 'default')")
+@option('--admin', 'is_admin', type=BOOL, default=False, help="set user as admin")
+@option('--groups', 'groups', default=None, help="Comma seperated list of groups (leave blank for default).")
+def invite(email, name, inviter_email, groups, is_admin=False,
+           organization='default'):
+    pass
+"""
+    assert len(check_code(code)) == 0
+
+def test_no_dash_finding():
+    code = """
+from click import manager, argument, option
+@manager.command()
+@argument('email')
+@argument('name')
+@argument('inviter_email')
+@option('--org', 'organization', default='default', help="The organization the user belongs to (leave blank for 'default')")
+@option('--admin', 'is_admin', type=BOOL, default=False, help="set user as admin")
+@option('--groups', 'groups', default=None, help="Comma seperated list of groups (leave blank for default).")
+@option('--users', 'users')
+def invite(email, name, inviter_email, groups, is_admin=False,
+           organization='default'):
+    pass
+"""
+    assert len(check_code(code)) == 1
